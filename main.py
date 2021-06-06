@@ -3,6 +3,7 @@
 
 import os
 import sys
+import datetime
 import struct
 import socket
 import configparser
@@ -21,7 +22,7 @@ class MainWindow(QtWidgets.QMainWindow):
         """
         super(MainWindow, self).__init__(*args, **kwargs)
         
-        #self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) # SOCK_DGRAM is UDP
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) # SOCK_DGRAM is UDP
 
         self.destroyed.connect(lambda: self._on_destroyed())         # connect some actions to exit
         # Load the UI Page
@@ -33,8 +34,8 @@ class MainWindow(QtWidgets.QMainWindow):
         config = configparser.ConfigParser()
         config.read(path_config_file)
 
-        UDP_IP = str(config['DEFAULT']['UDP_IP'])
-        UDP_PORT = int(config['DEFAULT']['UDP_PORT'])
+        self.UDP_IP = str(config['DEFAULT']['UDP_IP'])
+        self.UDP_PORT = int(config['DEFAULT']['UDP_PORT'])
 
         # Connection of different action to different Menus and Buttons
         self.button_initialize.clicked.connect(self.initialize)
@@ -86,24 +87,25 @@ class MainWindow(QtWidgets.QMainWindow):
         self.cutoff_3.clicked.connect(self.cutoff_changed_3)
         self.cutoff_3.setStyleSheet("QRadioButton { color : rgb(193, 202, 227); }")
 
+        #self.synt()
         self.initialize()
+        self.telemetry()
 
 
     def _on_destroyed(self):
         """
         A function to do some actions when the main window is closing.
         """
-        pass
+        self.sock.close()
         #sock.shutdown(socket.SHUT_RDWR)
         #sock.close()
-        #self.process_python.close()
 
     def quit(self):
         """
         A function to quit the programm
         """
         #sock.shutdown(socket.SHUT_RDWR)
-        #sock.close()
+        self.sock.close()
         sys.exit()
 
     def att1_prd(self):
@@ -113,16 +115,21 @@ class MainWindow(QtWidgets.QMainWindow):
 
         param = self.Att1_prd.value()
         temp = 2*param
-        MESSAGE = b'0x15' + b'0x01' + struct.pack(">B", int(temp))
-        # all variats give the same result. Struct.pack is the fastest
+        MESSAGE = b'\x15' + b'\x01' + struct.pack(">B", int(temp))
+        # all variants give the same result. Struct.pack is the fastest
         #print( (int(temp)).to_bytes(1, byteorder='big') )
         #print( struct.pack(">B", int(temp)) )
-        #print( bytes([int(temp)]) )
-
-        # binary format
-        #print("{0:{fill}8b}".format(10, fill='0'))
         
-        #sock.sendto(MESSAGE, (UDP_IP, UDP_PORT))    
+        self.sock.sendto( MESSAGE, (self.UDP_IP, self.UDP_PORT) )
+        data_raw, addr = self.sock.recvfrom(3)
+
+        # get attenuation
+        MESSAGE = b'\x1f' + b'\x01' + b'\x00'
+
+        self.sock.sendto( MESSAGE, (self.UDP_IP, self.UDP_PORT) )
+        data_raw, addr = self.sock.recvfrom(3)
+
+        self.telemetry_text.appendPlainText( 'Attenuator 1: ' + str(data_raw[2]/2) + ' dB')
 
     def att2_prd(self):
         """
@@ -131,9 +138,18 @@ class MainWindow(QtWidgets.QMainWindow):
 
         param = self.Att2_prd.value()
         temp = 2*param
-        MESSAGE = b'0x16' + b'0x01' + struct.pack(">B", int(temp))
+        MESSAGE = b'\x16' + b'\x01' + struct.pack(">B", int(temp))
         
-        #sock.sendto(MESSAGE, (UDP_IP, UDP_PORT))    
+        self.sock.sendto( MESSAGE, (self.UDP_IP, self.UDP_PORT) )
+        data_raw, addr = self.sock.recvfrom(3)
+
+        # get attenuation
+        MESSAGE = b'\x20' + b'\x01' + b'\x00'
+
+        self.sock.sendto( MESSAGE, (self.UDP_IP, self.UDP_PORT) )
+        data_raw, addr = self.sock.recvfrom(3)
+
+        self.telemetry_text.appendPlainText( 'Attenuator 2: ' + str(data_raw[2]/2) + ' dB')
 
     def fv_ctrl(self):
         """
@@ -142,9 +158,18 @@ class MainWindow(QtWidgets.QMainWindow):
 
         param = self.Fv_ctrl.value()
         temp = param/5.625
-        MESSAGE = b'0x17' + b'0x01' + struct.pack(">B", int(temp))
+        MESSAGE = b'\x17' + b'\x01' + struct.pack(">B", int(temp))
         
-        #sock.sendto(MESSAGE, (UDP_IP, UDP_PORT))
+        self.sock.sendto( MESSAGE, (self.UDP_IP, self.UDP_PORT) )
+        data_raw, addr = self.sock.recvfrom(3)
+
+        # get phase
+        MESSAGE = b'\x21' + b'\x01' + b'\x00'
+
+        self.sock.sendto( MESSAGE, (self.UDP_IP, self.UDP_PORT) )
+        data_raw, addr = self.sock.recvfrom(3)
+
+        self.telemetry_text.appendPlainText( 'Phase 1: ' + str(data_raw[2]*5.625) + ' deg')
 
     def fv_prm(self):
         """
@@ -153,9 +178,18 @@ class MainWindow(QtWidgets.QMainWindow):
 
         param = self.Fv_prm.value()
         temp = param/5.625
-        MESSAGE = b'0x19' + b'0x01' + struct.pack(">B", int(temp))
+        MESSAGE = b'\x19' + b'\x01' + struct.pack(">B", int(temp))
         
-        #sock.sendto(MESSAGE, (UDP_IP, UDP_PORT))
+        self.sock.sendto( MESSAGE, (self.UDP_IP, self.UDP_PORT) )
+        data_raw, addr = self.sock.recvfrom(3)
+
+        # get phase
+        MESSAGE = b'\x23' + b'\x01' + b'\x00'
+
+        self.sock.sendto( MESSAGE, (self.UDP_IP, self.UDP_PORT) )
+        data_raw, addr = self.sock.recvfrom(3)
+
+        self.telemetry_text.appendPlainText( 'Phase 2: ' + str(data_raw[2]*5.625) + ' deg')
 
     def att_prm(self):
         """
@@ -164,48 +198,113 @@ class MainWindow(QtWidgets.QMainWindow):
 
         param = self.Att_prm.value()
         temp = param/2
-        MESSAGE = b'0x1c' + b'0x01' + struct.pack(">B", int(temp))
+        MESSAGE = b'\x1c' + b'\x01' + struct.pack(">B", int(temp))
         
-        #sock.sendto(MESSAGE, (UDP_IP, UDP_PORT))    
+        self.sock.sendto( MESSAGE, (self.UDP_IP, self.UDP_PORT) )
+        data_raw, addr = self.sock.recvfrom(3)
+
+        # get attenuation
+        MESSAGE = b'\x26' + b'\x01' + b'\x00'
+
+        self.sock.sendto( MESSAGE, (self.UDP_IP, self.UDP_PORT) )
+        data_raw, addr = self.sock.recvfrom(3)
+
+        self.telemetry_text.appendPlainText( 'Attenuator 3: ' + str(data_raw[2]*2) + ' dB')
 
     def k_prm(self):
         """
         A function to change the amplification coefficient in the PRM channel
         """
 
-        param = self.Att_prm.value()
-        temp = param
-        MESSAGE = b'0x1a' + b'0x01' + struct.pack(">B", int(temp))
+        param = self.K_prm.value()
+        temp = param/22
+        MESSAGE = b'\x1a' + b'\x01' + struct.pack(">B", int(temp))
         
-        #sock.sendto(MESSAGE, (UDP_IP, UDP_PORT))  
+        self.sock.sendto( MESSAGE, (self.UDP_IP, self.UDP_PORT) )
+        data_raw, addr = self.sock.recvfrom(3)
+
+        # get amplification
+        MESSAGE = b'\x24' + b'\x01' + b'\x00'
+
+        self.sock.sendto( MESSAGE, (self.UDP_IP, self.UDP_PORT) )
+        data_raw, addr = self.sock.recvfrom(3)
+
+        self.telemetry_text.appendPlainText( 'Amplification: ' + str(data_raw[2]*22) + ' dB')
 
     def cutoff_changed_2(self):
         """
         A function to change the amplification coefficient in the PRM channel
         """
 
-        MESSAGE = b'0x1b' + b'0x01' + b'0x00'
-        #sock.sendto(MESSAGE, (UDP_IP, UDP_PORT))   
+        MESSAGE = b'\x1b' + b'\x01' + b'\x00'
+
+        self.sock.sendto( MESSAGE, (self.UDP_IP, self.UDP_PORT) )
+        data_raw, addr = self.sock.recvfrom(3)
+
+        # get cutt-off
+        MESSAGE = b'\x25' + b'\x01' + b'\x00'
+
+        self.sock.sendto( MESSAGE, (self.UDP_IP, self.UDP_PORT) )
+        data_raw, addr = self.sock.recvfrom(3)
+
+        if data_raw[2] == 0:
+            freq = '30'
+        elif data_raw[2] == 1:
+            freq = '105'
+        elif data_raw[2] == 2:
+            freq = '300'
+
+        self.telemetry_text.appendPlainText( 'Cut-off Freq: ' + freq + ' MHz')
 
     def cutoff_changed_3(self):
         """
         A function to change the amplification coefficient in the PRM channel
         """
 
-        MESSAGE = b'0x1b' + b'0x01' + b'0x01'
-        #sock.sendto(MESSAGE, (UDP_IP, UDP_PORT))
+        MESSAGE = b'\x1b' + b'\x01' + b'\x01'
+
+        self.sock.sendto( MESSAGE, (self.UDP_IP, self.UDP_PORT) )
+        data_raw, addr = self.sock.recvfrom(3)
+
+        # get cutt-off
+        MESSAGE = b'\x25' + b'\x01' + b'\x00'
+
+        self.sock.sendto( MESSAGE, (self.UDP_IP, self.UDP_PORT) )
+        data_raw, addr = self.sock.recvfrom(3)
+
+        if data_raw[2] == 0:
+            freq = '30'
+        elif data_raw[2] == 1:
+            freq = '105'
+        elif data_raw[2] == 2:
+            freq = '300'
+
+        self.telemetry_text.appendPlainText( 'Cut-off Freq: ' + freq + ' MHz')
 
     def cutoff_changed_1(self):
         """
         A function to change the amplification coefficient in the PRM channel
         """
 
-        MESSAGE = b'0x1b' + b'0x01' + b'0x02'
-        #sock.sendto(MESSAGE, (UDP_IP, UDP_PORT))
+        MESSAGE = b'\x1b' + b'\x01' + b'\x02'
 
-    def string2bits(self, s = ''):
-        # maybe useless
-        return [bin(ord(x))[2:].zfill(8) for x in s]
+        self.sock.sendto( MESSAGE, (self.UDP_IP, self.UDP_PORT) )
+        data_raw, addr = self.sock.recvfrom(3)
+
+        # get cutt-off
+        MESSAGE = b'\x25' + b'\x01' + b'\x00'
+
+        self.sock.sendto( MESSAGE, (self.UDP_IP, self.UDP_PORT) )
+        data_raw, addr = self.sock.recvfrom(3)
+
+        if data_raw[2] == 0:
+            freq = '30'
+        elif data_raw[2] == 1:
+            freq = '105'
+        elif data_raw[2] == 2:
+            freq = '300'
+
+        self.telemetry_text.appendPlainText( 'Cut-off Freq: ' + freq + ' MHz')
 
     def synt(self):
         """
@@ -215,44 +314,77 @@ class MainWindow(QtWidgets.QMainWindow):
         param = self.Synt.value()
         temp = str(param)
         if len( temp ) == 4:
-            temp = '0' + '0' + '0' + '0' + temp
+            temp = '0' + temp
         elif len( temp ) == 5:
-            temp = '0' + '0' + '0' + temp
+            temp = temp
 
-        #print( ''.join(self.string2bits(temp)) )
-        MESSAGE = b'0x04' + b'0x08' + temp.encode()
-        
-        #sock.sendto(MESSAGE, (UDP_IP, UDP_PORT))  
+        MESSAGE = b'\x04' + b'\x08' + b'\x00' + b'\x00' + b'\x00' + temp.encode()
+        self.sock.sendto( MESSAGE, (self.UDP_IP, self.UDP_PORT) )
+        data_raw, addr = self.sock.recvfrom(10)
+
+
+        # get frequency
+        MESSAGE = b'\x1e' + b'\x08' + (0).to_bytes(8, byteorder='big')
+
+        self.sock.sendto( MESSAGE, (self.UDP_IP, self.UDP_PORT) )
+        data_raw, addr = self.sock.recvfrom(10)
+
+        if chr(data_raw[4]) == '1':
+            state = 'ON'
+        elif chr(data_raw[4]) == '0':
+            state = 'OFF'
+
+        if chr(data_raw[5]) == '0':
+            freq = chr(data_raw[6]) + chr(data_raw[7])\
+                + chr(data_raw[8]) + chr(data_raw[9])
+        else:
+            freq = chr(data_raw[5]) + chr(data_raw[6]) + chr(data_raw[7])\
+                + chr(data_raw[8]) + chr(data_raw[9])
+
+        self.telemetry_text.appendPlainText( 'Power: ' + state + '\n' \
+            + 'Frequency: ' + freq )
 
     def initialize(self):
         """
         A function to initialize a bridge.
         """
 
-        MESSAGE = b'0x27' + b'0x01' + b'0x00'
+        MESSAGE = b'\x27' + b'\x01' + b'\x00'
 
-        #sock.sendto(MESSAGE, (UDP_IP, UDP_PORT))  
+        self.sock.sendto( MESSAGE, (self.UDP_IP, self.UDP_PORT) )
+        data_raw, addr = self.sock.recvfrom(3)
+
+        self.telemetry_text.appendPlainText( 'Initialization done' )
 
     def turn_off(self):
         """
          A function to turn off a bridge.
         """
         self.initialize()
-        sock.shutdown(socket.SHUT_RDWR)
-        sock.close()
+        self.sock.close()
+        sys.exit()
 
     def telemetry(self):
         """
         A function to get the telemetry.
         """
 
-        MESSAGE = b'0x0d' + b'0x08' + (0).to_bytes(8, byteorder='big')
-        #sock.sendto(MESSAGE, (UDP_IP, UDP_PORT))
+        MESSAGE = b'\x0d' + b'\x08' + (0).to_bytes(8, byteorder='big')
+        self.sock.sendto( MESSAGE, (self.UDP_IP, self.UDP_PORT) )
 
-        #data_raw, addr = sock.recvfrom(8)                 # buffer size is 1024 bytes
+        data_raw, addr = self.sock.recvfrom(10)
 
-        #data = data_raw.decode()
-        #self.telemetry_text.appendPlainText( str(data) )
+        data = data_raw #.decode()
+        if int(data[4]) == 1:
+            state = 'INIT'
+        elif int(data[4]) == 2:
+            state = 'WORK'
+        elif int(data[4]) == 3:
+            state = 'FAIL'
+
+        self.telemetry_text.appendPlainText( str(datetime.datetime.now().strftime("%d %b %Y %H:%M:%S")) + '\n' +\
+             'Temperature: ' + str(data[8]) + '\n' \
+             + 'State: ' + state)
 
     def help(self):
         """
