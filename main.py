@@ -157,6 +157,20 @@ class MainWindow(QtWidgets.QMainWindow):
         """
 
         param = self.Fv_ctrl.value()
+        
+        # cycling
+        if param == 360:
+            self.Fv_ctrl.setValue(0.0)
+            param = self.Fv_ctrl.value()
+        else:
+            pass
+
+        if param == -5.625:
+            self.Fv_ctrl.setValue(360.0 - 5.625)
+            param = self.Fv_ctrl.value()
+        else:
+            pass
+
         temp = param/5.625
         MESSAGE = b'\x17' + b'\x01' + struct.pack(">B", int(temp))
         
@@ -177,6 +191,20 @@ class MainWindow(QtWidgets.QMainWindow):
         """
 
         param = self.Fv_prm.value()
+        
+        # cycling
+        if param == 360:
+            self.Fv_ctrl.setValue(0.0)
+            param = self.Fv_prm.value()
+        else:
+            pass
+
+        if param == -5.625:
+            self.Fv_ctrl.setValue(360.0 - 5.625)
+            param = self.Fv_prm.value()
+        else:
+            pass
+
         temp = param/5.625
         MESSAGE = b'\x19' + b'\x01' + struct.pack(">B", int(temp))
         

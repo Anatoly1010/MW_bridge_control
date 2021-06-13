@@ -94,8 +94,11 @@
         <property name="decimals">
          <number>3</number>
         </property>
+        <property name="minimum">
+         <double>-5.625000000000000</double>
+        </property>
         <property name="maximum">
-         <double>354.375000000000000</double>
+         <double>360.000000000000000</double>
         </property>
         <property name="singleStep">
          <double>5.625000000000000</double>
@@ -139,8 +142,11 @@
         <property name="decimals">
          <number>3</number>
         </property>
+        <property name="minimum">
+         <double>-5.625000000000000</double>
+        </property>
         <property name="maximum">
-         <double>354.375000000000000</double>
+         <double>360.000000000000000</double>
         </property>
         <property name="singleStep">
          <double>5.625000000000000</double>
