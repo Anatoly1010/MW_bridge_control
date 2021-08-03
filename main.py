@@ -194,13 +194,13 @@ class MainWindow(QtWidgets.QMainWindow):
         
         # cycling
         if param == 360:
-            self.Fv_ctrl.setValue(0.0)
+            self.Fv_prm.setValue(0.0)
             param = self.Fv_prm.value()
         else:
             pass
 
         if param == -5.625:
-            self.Fv_ctrl.setValue(360.0 - 5.625)
+            self.Fv_prm.setValue(360.0 - 5.625)
             param = self.Fv_prm.value()
         else:
             pass
@@ -388,7 +388,7 @@ class MainWindow(QtWidgets.QMainWindow):
         """
          A function to turn off a bridge.
         """
-        self.initialize()
+        #self.initialize()
         self.sock.close()
         sys.exit()
 
